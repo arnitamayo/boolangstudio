@@ -36,9 +36,9 @@ namespace Boo.BooLangProject
             {
                 if (vsProject == null)
                     vsProject = new BooVSProject(this);
-            this.AddCATIDMapping(typeof(BooProjectNodeProperties), typeof(BooProjectNodeProperties).GUID);
-            this.AddCATIDMapping(typeof(GeneralPropertyPage), typeof(GeneralPropertyPage).GUID);
-            this.CanProjectDeleteItems = true;
+                this.AddCATIDMapping(typeof(BooProjectNodeProperties), typeof(BooProjectNodeProperties).GUID);
+                this.AddCATIDMapping(typeof(GeneralPropertyPage), typeof(GeneralPropertyPage).GUID);
+                this.CanProjectDeleteItems = true;
                 return vsProject;
             }
         }
