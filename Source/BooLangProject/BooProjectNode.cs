@@ -1,9 +1,11 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Microsoft.VisualStudio.Package;
 using System.Drawing;
 using System.Windows.Forms;
 using System.IO;
+using Microsoft.VisualStudio.Shell.Interop;
 using EnvDTE;
 using System.Reflection;
 
@@ -24,10 +26,21 @@ namespace Boo.BooLangProject
             {
                 this.ImageHandler.AddImage(img);
             }
+        }
 
+        private BooVSProject vsProject;
+
+        internal override object Object
+        {
+            get
+            {
+                if (vsProject == null)
+                    vsProject = new BooVSProject(this);
             this.AddCATIDMapping(typeof(BooProjectNodeProperties), typeof(BooProjectNodeProperties).GUID);
             this.AddCATIDMapping(typeof(GeneralPropertyPage), typeof(GeneralPropertyPage).GUID);
             this.CanProjectDeleteItems = true;
+                return vsProject;
+            }
         }
 
 
@@ -154,5 +167,29 @@ namespace Boo.BooLangProject
 
         }
 
+        public override object GetAutomationObject()
+        {
+            return new BooOAProject(this);
+        }
+
+        public override void Load(string fileName, string location, string name, uint flags, ref Guid iidProject, out int canceled)
+        {
+            base.Load(fileName, location, name, flags, ref iidProject, out canceled);
+
+            BooProjectSources.LoadedProjects.Add(new BooProjectSources(InteropSafeHierarchy));
+        }
+
+        IVsHierarchy InteropSafeHierarchy
+        {
+            get
+            {
+                IntPtr unknownPtr = Utilities.QueryInterfaceIUnknown(this);
+
+                if (unknownPtr == IntPtr.Zero)
+                    return null;
+
+                return (IVsHierarchy)Marshal.GetObjectForIUnknown(unknownPtr);
+            }
+        }
     }
 }

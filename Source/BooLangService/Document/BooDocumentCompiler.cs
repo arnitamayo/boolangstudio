@@ -1,32 +1,108 @@
+using System.Collections.Generic;
 using System.IO;
-using Boo.BooLangService.Document.Nodes;
+using System.Reflection;
 using Boo.Lang.Compiler;
 using Boo.Lang.Compiler.IO;
 using Boo.Lang.Compiler.Pipelines;
-using BooLangService;
+using Boo.Lang.Compiler.Steps;
 
 namespace Boo.BooLangService.Document
 {
+    /// <summary>
+    /// Compiles Boo documents into a format usable by the intellisense provider.
+    /// </summary>
     public class BooDocumentCompiler
     {
-        private readonly BooCompiler compiler = new BooCompiler();
-        private readonly BooDocumentVisitor visitor = new BooDocumentVisitor();
+        private BooDocumentVisitor visitor;
+        private BooCompiler compiler;
 
         public BooDocumentCompiler()
         {
-            compiler.Parameters.OutputWriter = new StringWriter();
-            compiler.Parameters.Pipeline = new ResolveExpressions();
-            compiler.Parameters.Pipeline.BreakOnErrors = false;
-            compiler.Parameters.Pipeline.Add(visitor);
+            visitor = new BooDocumentVisitor();
+            compiler = CreateCompiler(visitor);
         }
 
-        public CompiledDocument Compile(string filename, string source)
+        /// <summary>
+        /// Compiles a Boo file into a CompiledDocument.
+        /// </summary>
+        /// <returns>CompiledDocument from the source</returns>
+        public CompiledProject Compile()
         {
-            compiler.Parameters.Input.Add(new StringInput(filename, source));
-            
+            return Compile(null);
+        }
+
+        /// <summary>
+        /// Compiles a Boo file into a CompiledDocument, with a set of referenced assemblies.
+        /// </summary>
+        /// <param name="references">Additional assemblies to be referenced by the compiler</param>
+        /// <returns>CompiledDocument from the source</returns>
+        public CompiledProject Compile(IList<Assembly> references)
+        {
+            if (references != null)
+                compiler.Parameters.References.Extend(references);
+
             compiler.Run();
 
-            return new CompiledDocument(visitor.Document);
+            return new CompiledProject(
+                visitor.Project
+            );
+        }
+
+        public void AddSource(string fileName, string source)
+        {
+            compiler.Parameters.Input.Add(new StringInput(fileName, source));
+        }
+
+        public void Reset()
+        {
+            visitor = new BooDocumentVisitor();
+            compiler = CreateCompiler(visitor);
+        }
+
+        private BooCompiler CreateCompiler(BooDocumentVisitor visitor)
+        {
+            var newCompiler = compiler ?? new BooCompiler();
+
+            newCompiler.Parameters.OutputWriter = new StringWriter();
+            newCompiler.Parameters.Pipeline = new Compile { BreakOnErrors = false };
+            newCompiler.Parameters.Pipeline.Add(visitor);
+
+            return newCompiler;
+        }
+    }
+
+    public class IntellisenseResolveExpressions : Parse
+    {
+        public IntellisenseResolveExpressions()
+        {
+            Add(new InitializeTypeSystemServices());
+            Add(new PreErrorChecking());
+
+            Add(new MergePartialClasses());
+
+            Add(new InitializeNameResolutionService());
+            Add(new IntroduceGlobalNamespaces());
+
+            Add(new BindTypeDefinitions());
+            Add(new BindGenericParameters());
+            Add(new BindNamespaces());
+            Add(new BindBaseTypes());
+
+            Add(new IntroduceModuleClasses());
+
+            Add(new BindTypeDefinitions());
+            Add(new BindGenericParameters());
+            Add(new BindEnumMembers());
+            Add(new BindBaseTypes());
+
+            Add(new BindMethods());
+            Add(new ResolveTypeReferences());
+            Add(new BindTypeMembers());
+
+            Add(new ProcessInheritedAbstractMembers());
+            Add(new CheckMemberNames());
+
+            Add(new ExpandProperties());
         }
     }
 }

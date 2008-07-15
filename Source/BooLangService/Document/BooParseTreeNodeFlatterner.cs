@@ -4,8 +4,16 @@ using Boo.BooLangService.Intellisense;
 
 namespace Boo.BooLangService.Document
 {
+    /// <summary>
+    /// 
+    /// </summary>
     public class BooParseTreeNodeFlatterner
     {
+        /// <summary>
+        /// Flattens a tree into a list.
+        /// </summary>
+        /// <param name="node"></param>
+        /// <returns></returns>
         public BooParseTreeNodeList FlattenFrom(IBooParseTreeNode node)
         {
             BooParseTreeNodeList flattened = new IntellisenseNodeList();
@@ -30,6 +38,16 @@ namespace Boo.BooLangService.Document
                 foreach (IBooParseTreeNode sibling in parent.Children)
                 {
                     flattened.Add(sibling);
+
+                    // hack to get cross-file intellisense working
+                    // todo: make this better
+                    if (sibling is DocumentTreeNode)
+                    {
+                        foreach (var documentChild in sibling.Children)
+                        {
+                            flattened.Add(documentChild);
+                        }
+                    }
                 }
 
                 flattened.Add(parent);
